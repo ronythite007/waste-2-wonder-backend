@@ -6,7 +6,7 @@ supabase
 werkzeug==2.0.3
 groq
 psycopg2-binary==2.9.9
-crewai
+crewai==0.1.32
 crewai_tools
 setuptools
 gunicorn

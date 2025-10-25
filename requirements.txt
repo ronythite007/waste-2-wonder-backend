@@ -1,0 +1,10 @@
+flask==2.0.1
+flask-cors==3.0.10
+cloudinary==1.34.0
+python-dotenv==0.19.0
+supabase
+werkzeug==2.0.3
+groq
+psycopg2-binary==2.9.9
+crewai
+crewai_tools

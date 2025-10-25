@@ -1,0 +1,4 @@
+{
+  "project_id": "waste-2-wonder",
+  "db_url": "postgresql://postgres:Rohanthite007@db.azgtlmsdcooeilzzkoip.supabase.co:5432/postgres"
+}

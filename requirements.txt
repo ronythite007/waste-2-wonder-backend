@@ -8,3 +8,5 @@ groq
 psycopg2-binary==2.9.9
 crewai
 crewai_tools
+setuptools
+gunicorn

@@ -8,7 +8,7 @@ import logging
 import json
 from supabase import create_client
 from waste_analysis import WasteAnalyzer
-from chatbot import UpcyclingChatbot
+# from chatbot import UpcyclingChatbot
 
 # Load environment variables
 load_dotenv()
@@ -49,7 +49,7 @@ try:
     )
     
     # Initialize our services
-    chatbot = UpcyclingChatbot()
+    # chatbot = UpcyclingChatbot()
     waste_analyzer = WasteAnalyzer()
     
 except Exception as e:

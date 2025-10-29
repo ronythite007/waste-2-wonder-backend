@@ -22,16 +22,13 @@ app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key')
 
 # Configure CORS
-# CORS(app, resources={
-#     r"/*": {
-#         "origins": ["http://localhost:5173", "http://localhost:3000"],
-#         "methods": ["GET", "POST", "OPTIONS"],
-#         "allow_headers": ["Content-Type", "Authorization"]
-#     }
-# }, supports_credentials=True)
-
-
-CORS(app, resources={r"/*": {"origins": ["*"]}}, supports_credentials=False)
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
+        "methods": ["GET", "POST", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+}, supports_credentials=True)
 
 
 # Initialize external services
@@ -116,32 +113,25 @@ def home():
 @app.route('/api/upload-image', methods=['POST'])
 def upload_image():
     """Upload image to Cloudinary"""
-    # Create temp directory if it doesn't exist
-    if not os.path.exists('temp'):
-        os.makedirs('temp')
-        
+    temp_path = None
+    
     try:
+        # Create temp directory if it doesn't exist
+        if not os.path.exists('temp'):
+            os.makedirs('temp')
+        
         # Validate image file
         if 'image' not in request.files:
-            return jsonify({
-                "success": False,
-                "error": "No image file provided"
-            }), 400
+            return jsonify({"success": False, "error": "No image file provided"}), 400
             
         file = request.files['image']
         if not file.filename:
-            return jsonify({
-                "success": False,
-                "error": "No file selected"
-            }), 400
+            return jsonify({"success": False, "error": "No file selected"}), 400
 
         # Validate file type
         filename = file.filename.lower()
         if not any(filename.endswith(ext) for ext in ['.png', '.jpg', '.jpeg']):
-            return jsonify({
-                "success": False,
-                "error": "Invalid file type. Allowed types: .png, .jpg, .jpeg"
-            }), 400
+            return jsonify({"success": False, "error": "Invalid file type. Allowed types: .png, .jpg, .jpeg"}), 400
 
         # Save with original extension
         ext = os.path.splitext(filename)[1]
@@ -149,49 +139,32 @@ def upload_image():
             
         # Save image temporarily
         file.save(temp_path)
-        logger.debug("Saved image to temporary file")
+        logger.info(f"Saved image to: {temp_path}")
         
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
-            return jsonify({
-                "success": False,
-                "error": "Invalid or empty image file"
-            }), 400
+            return jsonify({"success": False, "error": "Invalid or empty image file"}), 400
 
         # Upload to Cloudinary
-        try:
-            upload_result = cloudinary.uploader.upload(temp_path)
-            image_url = upload_result.get('secure_url')
-            if not image_url:
-                raise Exception("Failed to get image URL from Cloudinary")
-            session['image_url'] = image_url
-            logger.info("Uploaded image to Cloudinary")
+        upload_result = cloudinary.uploader.upload(temp_path)
+        image_url = upload_result.get('secure_url')
+        
+        if not image_url:
+            return jsonify({"success": False, "error": "Failed to get image URL from Cloudinary"}), 500
             
-            return jsonify({
-                "success": True,
-                "image_url": image_url
-            })
-            
-        except Exception as e:
-            logger.error(f"Failed to upload to Cloudinary: {str(e)}")
-            return jsonify({
-                "success": False,
-                "error": "Failed to upload image"
-            }), 500
+        logger.info(f"Successfully uploaded to Cloudinary: {image_url}")
+        
+        return jsonify({"success": True, "image_url": image_url})
             
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Error in image analysis: {error_msg}")
-        return jsonify({
-            "success": False,
-            "error": error_msg
-        }), 500
+        logger.error(f"Error in image upload: {str(e)}")
+        return jsonify({"success": False, "error": f"Upload failed: {str(e)}"}), 500
         
     finally:
         # Clean up temp file
-        if os.path.exists(temp_path):
+        if temp_path and os.path.exists(temp_path):
             try:
                 os.remove(temp_path)
-                logger.debug("Cleaned up temporary file")
+                logger.info("Cleaned up temporary file")
             except Exception as e:
                 logger.warning(f"Failed to clean up temp file: {str(e)}")
 
@@ -231,12 +204,6 @@ def generate_suggestions():
                     "error": "Failed to analyze image"
                 }), 400
             image_analysis = analysis_result["analysis"]
-        except Exception as e:
-            logger.error(f"Error analyzing image: {str(e)}")
-            return jsonify({
-                "success": False,
-                "error": "Failed to analyze image"
-            }), 500
         except Exception as e:
             logger.error(f"Error analyzing image: {str(e)}")
             return jsonify({

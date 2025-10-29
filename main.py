@@ -116,14 +116,15 @@ def upload_image():
     temp_path = None
     
     try:
-        # Create temp directory if it doesn't exist
-        if not os.path.exists('temp'):
-            os.makedirs('temp')
+        # Use /tmp directory on Vercel
+        temp_dir = '/tmp'
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
         
         # Validate image file
         if 'image' not in request.files:
             return jsonify({"success": False, "error": "No image file provided"}), 400
-            
+
         file = request.files['image']
         if not file.filename:
             return jsonify({"success": False, "error": "No file selected"}), 400
@@ -133,40 +134,40 @@ def upload_image():
         if not any(filename.endswith(ext) for ext in ['.png', '.jpg', '.jpeg']):
             return jsonify({"success": False, "error": "Invalid file type. Allowed types: .png, .jpg, .jpeg"}), 400
 
-        # Save with original extension
+        # Save to temporary location
         ext = os.path.splitext(filename)[1]
-        temp_path = os.path.join('temp', f'temp_image{ext}')
-            
-        # Save image temporarily
+        temp_path = os.path.join(temp_dir, f'temp_image{ext}')
         file.save(temp_path)
-        logger.info(f"Saved image to: {temp_path}")
         
+        logger.info(f"Saved image temporarily: {temp_path}")
+
         if not os.path.exists(temp_path) or os.path.getsize(temp_path) == 0:
             return jsonify({"success": False, "error": "Invalid or empty image file"}), 400
 
         # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(temp_path)
         image_url = upload_result.get('secure_url')
-        
+
         if not image_url:
             return jsonify({"success": False, "error": "Failed to get image URL from Cloudinary"}), 500
-            
-        logger.info(f"Successfully uploaded to Cloudinary: {image_url}")
-        
+
+        logger.info(f"Uploaded to Cloudinary: {image_url}")
+
         return jsonify({"success": True, "image_url": image_url})
-            
+
     except Exception as e:
         logger.error(f"Error in image upload: {str(e)}")
         return jsonify({"success": False, "error": f"Upload failed: {str(e)}"}), 500
-        
+
     finally:
         # Clean up temp file
         if temp_path and os.path.exists(temp_path):
             try:
                 os.remove(temp_path)
-                logger.info("Cleaned up temporary file")
+                logger.info("Cleaned up temp file")
             except Exception as e:
                 logger.warning(f"Failed to clean up temp file: {str(e)}")
+
 
 @app.route('/api/generate-suggestions', methods=['POST'])
 def generate_suggestions():
